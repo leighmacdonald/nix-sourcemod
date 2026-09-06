@@ -1,0 +1,10 @@
+# Nix build outputs
+result
+result-*
+# direnv + editor
+.direnv/
+.idea/
+.vscode/
+.DS_Store
+# never commit local change summaries
+AGENT_CHANGELOG.md

@@ -8,3 +8,5 @@ result-*
 .DS_Store
 # never commit local change summaries
 AGENT_CHANGELOG.md
+.*
+!.github/

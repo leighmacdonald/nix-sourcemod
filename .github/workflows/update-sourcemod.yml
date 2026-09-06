@@ -1,0 +1,72 @@
+name: Update SourceMod Versions
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-sourcemod:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Fetch latest SourceMod versions and update packages
+        id: update
+        run: |
+          python .github/scripts/update_sourcemod.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+            git diff
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package-stable.nix package-dev.nix
+          
+          # Parse version changes from the update step output
+          VERSION_CHANGES="${{ steps.update.outputs.version_changes }}"
+          STABLE_FROM=$(echo "$VERSION_CHANGES" | jq -r '.stable.from')
+          STABLE_TO=$(echo "$VERSION_CHANGES" | jq -r '.stable.to')
+          DEV_FROM=$(echo "$VERSION_CHANGES" | jq -r '.dev.from')
+          DEV_TO=$(echo "$VERSION_CHANGES" | jq -r '.dev.to')
+          
+          COMMIT_MSG="chore: update SourceMod to latest builds"
+          COMMIT_MSG+=$'\n\n'
+          COMMIT_MSG+="stable (1.12): $STABLE_FROM -> $STABLE_TO"$'\n'
+          COMMIT_MSG+="dev (1.13): $DEV_FROM -> $DEV_TO"
+          
+          git commit -m "$COMMIT_MSG"
+          git push
+        env:
+          VERSION_CHANGES: ${{ steps.update.outputs.version_changes }}

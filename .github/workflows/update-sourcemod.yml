@@ -49,24 +49,24 @@ jobs:
 
       - name: Commit and push changes
         if: steps.changes.outputs.changed == 'true'
+        env:
+          VERSION_CHANGES: ${{ steps.update.outputs.version_changes }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package-stable.nix package-dev.nix
-          
-          # Parse version changes from the update step output
-          VERSION_CHANGES="${{ steps.update.outputs.version_changes }}"
+
+          # VERSION_CHANGES comes from the environment (set above) so the
+          # JSON double-quotes don't break shell quoting.
           STABLE_FROM=$(echo "$VERSION_CHANGES" | jq -r '.stable.from')
           STABLE_TO=$(echo "$VERSION_CHANGES" | jq -r '.stable.to')
           DEV_FROM=$(echo "$VERSION_CHANGES" | jq -r '.dev.from')
           DEV_TO=$(echo "$VERSION_CHANGES" | jq -r '.dev.to')
-          
+
           COMMIT_MSG="chore: update SourceMod to latest builds"
           COMMIT_MSG+=$'\n\n'
           COMMIT_MSG+="stable (1.12): $STABLE_FROM -> $STABLE_TO"$'\n'
           COMMIT_MSG+="dev (1.13): $DEV_FROM -> $DEV_TO"
-          
+
           git commit -m "$COMMIT_MSG"
           git push
-        env:
-          VERSION_CHANGES: ${{ steps.update.outputs.version_changes }}

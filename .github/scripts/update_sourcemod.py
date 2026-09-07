@@ -5,6 +5,7 @@ Fetch latest SourceMod releases from GitHub API and update Nix package files.
 
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
@@ -164,12 +165,20 @@ def main():
     update_package_file(PACKAGE_STABLE, stable, "stable-1.12")
     update_package_file(PACKAGE_DEV, dev, "master/1.13 dev")
 
-    # Output version changes for the workflow
+    # Output version changes for the workflow via $GITHUB_OUTPUT
+    # (the legacy ::set-output command is disabled on modern runners).
     changes = {
         "stable": {"from": current_stable, "to": stable["version"]},
         "dev": {"from": current_dev, "to": dev["version"]},
     }
-    print(f"::set-output name=version_changes::{json.dumps(changes)}")
+    payload = json.dumps(changes)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a", encoding="utf-8") as fh:
+            fh.write(f"version_changes={payload}\n")
+    else:
+        # Local testing fallback (no GITHUB_OUTPUT outside Actions).
+        print(f"version_changes={payload}")
 
     # Configure git
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)

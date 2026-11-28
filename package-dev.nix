@@ -7,7 +7,7 @@
 }:
 stdenv.mkDerivation {
   pname = "sourcemod";
-  version = "1.13.0-git7497";
+  version = "1.13.0-git7498";
 
   # Platform-specific source and hash
   src = fetchurl {
